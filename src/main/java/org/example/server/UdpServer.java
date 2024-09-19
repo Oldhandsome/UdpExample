@@ -20,7 +20,7 @@ import java.net.NetworkInterface;
 import java.nio.charset.StandardCharsets;
 
 /**
- * UDP服务器
+ * UDP服务器【点对点】
  */
 public class UdpServer {
     private final Logger logger = LoggerFactory.getLogger(UdpServer.class);
@@ -45,27 +45,33 @@ public class UdpServer {
     public void startServer() throws InterruptedException {
         NetworkInterface networkInterface = NetUtil.LOOPBACK_IF;
 
-        ChannelFuture channelFuture = new Bootstrap().group(new NioEventLoopGroup()).channelFactory(new ChannelFactory<Channel>() {
-            @Override
-            public Channel newChannel() {
-                return new NioDatagramChannel(InternetProtocolFamily.IPv4);
-            }
-        }).handler(new ChannelInitializer<NioDatagramChannel>() {
-            @Override
-            public void initChannel(NioDatagramChannel ch) throws Exception {
-                ch.pipeline().addLast("Decoder-MooooooN", new DatagramPacketDecoder(decoder)).addLast("BaseMessageEncoder-MooooooN", new DatagramPacketEncoder<>(baseMessageEncoder)).addLast("ByteArrayEncoder-MooooooN", new DatagramPacketEncoder<>(byteArrayEncoder)).addLast(new ChannelInboundHandlerAdapter() {
+        ChannelFuture channelFuture = new Bootstrap()
+                .group(new NioEventLoopGroup())
+                .channelFactory(new ChannelFactory<Channel>() {
                     @Override
-                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
-                        super.channelRead(ctx, msg);
-                        if (msg instanceof BaseMessage) {
-                            logger.debug("received base message {}", msg);
-                        } else if (msg instanceof byte[]) {
-                            logger.debug("received byte array {}", new String((byte[]) msg, StandardCharsets.UTF_8));
-                        }
+                    public Channel newChannel() {
+                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
-                });
-            }
-        }).bind(address.getPort());
+                }).handler(new ChannelInitializer<NioDatagramChannel>() {
+                    @Override
+                    public void initChannel(NioDatagramChannel ch) throws Exception {
+                        ch.pipeline()
+                                .addLast("Decoder-MooooooN", new DatagramPacketDecoder(decoder))
+                                .addLast("BaseMessageEncoder-MooooooN", new DatagramPacketEncoder<>(baseMessageEncoder))
+                                .addLast("ByteArrayEncoder-MooooooN", new DatagramPacketEncoder<>(byteArrayEncoder))
+                                .addLast(new ChannelInboundHandlerAdapter() {
+                                    @Override
+                                    public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+                                        super.channelRead(ctx, msg);
+                                        if (msg instanceof BaseMessage) {
+                                            logger.debug("received base message {}", msg);
+                                        } else if (msg instanceof byte[]) {
+                                            logger.debug("received byte array {}", new String((byte[]) msg, StandardCharsets.UTF_8));
+                                        }
+                                    }
+                                });
+                    }
+                }).bind(address.getPort());
 
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {

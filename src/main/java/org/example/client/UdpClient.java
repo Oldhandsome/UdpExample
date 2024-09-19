@@ -26,9 +26,9 @@ import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 /**
- * UDP的客户端
+ * UDP的客户端【点对点】
  */
-public class UdpChannel {
+public class UdpClient {
     /**
      * 远程服务器地址
      */
@@ -36,32 +36,31 @@ public class UdpChannel {
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
-    private final Logger logger = LoggerFactory.getLogger(UdpChannel.class);
+    private final Logger logger = LoggerFactory.getLogger(UdpClient.class);
     private volatile Channel channel;
 
-    public UdpChannel(InetSocketAddress remoteAddress) {
+    public UdpClient(InetSocketAddress remoteAddress) {
         this.remoteAddress = remoteAddress;
     }
 
     public static void main(String[] args) throws InterruptedException {
-        InetSocketAddress localhost = new InetSocketAddress("localhost", 51888);
-        UdpChannel udpChannel = new UdpChannel(localhost);
-        udpChannel.connect();
+        UdpClient udpClient = new UdpClient(new InetSocketAddress("localhost", 51888));
+        udpClient.connect();
 
-        udpChannel.write(new CommonMessage("Hello World [BaseMessage]"));
+        Thread.sleep(2000);
 
-        Thread.sleep(1000);
+        udpClient.write(new CommonMessage("Hello World [BaseMessage]"));
 
-        udpChannel.write("Hello World [byte array]".getBytes(StandardCharsets.UTF_8));
+        udpClient.write("Hello World [byte array]".getBytes(StandardCharsets.UTF_8));
 
-        udpChannel.disconnect();
+        Thread.sleep(2000);
 
-        System.out.println("1234");
+        udpClient.disconnect();
     }
 
     /**
      * 与服务器建立连接
-     * */
+     */
     public void connect() throws InterruptedException {
         Bootstrap bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
@@ -94,7 +93,7 @@ public class UdpChannel {
 
     /**
      * 与服务器断开连接
-     * */
+     */
     public void disconnect() throws InterruptedException {
         if (channel != null && channel.isActive()) {
             synchronized (this) {
@@ -116,7 +115,6 @@ public class UdpChannel {
         synchronized (this) {
             if (channel != null && channel.isActive()) {
                 channel.writeAndFlush(new BaseMessagePacket(msg, remoteAddress));
-                channel.bind(remoteAddress);
                 return true;
             }
         }
