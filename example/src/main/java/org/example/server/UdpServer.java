@@ -18,30 +18,31 @@ import java.net.SocketException;
 import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
-public class UdpBroadcastServer {
-    private final Logger logger = LoggerFactory.getLogger(UdpBroadcastServer.class);
+/**
+ * UDP服务器【点对点】
+ */
+public class UdpServer {
+    private final Logger logger = LoggerFactory.getLogger(UdpServer.class);
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
     private final int port;
     private volatile NioDatagramChannel channel;
 
-    public UdpBroadcastServer(int port) {
+    public UdpServer(int port) {
         this.port = port;
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        int port = 51888; // 本机端口
-
-        UdpBroadcastServer receiver = new UdpBroadcastServer(port);
-        receiver.start();
+        UdpServer udpServer = new UdpServer(51888);
+        udpServer.startServer();
     }
 
     /**
      * 启动服务器
      */
-    public void start() throws InterruptedException {
-        Bootstrap bootstrap = new Bootstrap()
+    public void startServer() throws InterruptedException, UnknownHostException, SocketException {
+        ChannelFuture channelFuture = new Bootstrap()
                 .group(new NioEventLoopGroup())
                 .channelFactory(new ChannelFactory<Channel>() {
                     @Override
@@ -49,10 +50,6 @@ public class UdpBroadcastServer {
                         return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
                 })
-                .option(ChannelOption.SO_BROADCAST, true)
-                .option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.SO_RCVBUF, 2048 * 1024)
-                .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
                     public void initChannel(NioDatagramChannel ch) throws Exception {
@@ -72,15 +69,13 @@ public class UdpBroadcastServer {
                                     }
                                 });
                     }
-                });
+                }).bind(this.port);
 
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
-                    channel = (NioDatagramChannel) bootstrap.bind(port).sync().channel();
-
-                    logger.debug("receiver start {}!", channel.isActive());
-
+                    channel = (NioDatagramChannel) channelFuture.sync().channel();
+                    logger.debug("server start {}!", channel.isActive());
                     channel.closeFuture().await();
                 }
             }
@@ -90,18 +85,19 @@ public class UdpBroadcastServer {
     /**
      * 终止服务器
      */
-    public void stop() throws InterruptedException {
+    public void endServer() throws InterruptedException {
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
                     channel.close().sync();
                     channel.eventLoop().shutdownGracefully().sync();
 
-                    logger.debug("receiver stop {}!", channel.isActive());
+                    logger.debug("server stop {}!", channel.isActive());
 
                     channel = null;
                 }
             }
         }
     }
+
 }

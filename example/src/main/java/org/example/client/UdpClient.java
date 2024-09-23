@@ -3,7 +3,10 @@ package org.example.client;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.buffer.ByteBuf;
-import io.netty.channel.*;
+import io.netty.channel.Channel;
+import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.ChannelInboundHandlerAdapter;
+import io.netty.channel.ChannelInitializer;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
 import io.netty.channel.socket.nio.NioDatagramChannel;
@@ -23,10 +26,9 @@ import java.net.InetSocketAddress;
 import java.util.Scanner;
 
 /**
- * UDP的客户端【多对多】；
- * 不能使用服务器和客户端不能在同一台设备上，组播是基于路由器之上实现的，要想网络内支持组播，需要有能够管理组播组的路由器或是三层交换机（带部分路由功能的交换机），广播是多播的特例
+ * UDP的客户端【点对点】
  */
-public class UdpBroadcastClient {
+public class UdpClient {
     /**
      * 远程服务器地址
      */
@@ -34,28 +36,28 @@ public class UdpBroadcastClient {
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
-    private final Logger logger = LoggerFactory.getLogger(UdpBroadcastClient.class);
+    private final Logger logger = LoggerFactory.getLogger(UdpClient.class);
     private volatile Channel channel;
 
 
-    public UdpBroadcastClient(int remotePort) {
-        this.remoteAddress = new InetSocketAddress("255.255.255.255", remotePort);
+    public UdpClient(String remoteTcpIp, int remotePort) {
+        this.remoteAddress = new InetSocketAddress(remoteTcpIp, remotePort);
     }
 
     public static void main(String[] args) throws InterruptedException {
-        UdpBroadcastClient udpClient = new UdpBroadcastClient(51888);
+        UdpClient udpClient = new UdpClient("192.168.121.33", 51888);
         udpClient.connect();
 
         Scanner scanner = new Scanner(System.in);
 
-        while (true){
+        while (true) {
             System.out.print("please input:");
             String input = scanner.next();
             System.out.println("the input of user:" + input);
-            if(input.equals("quit")){
+            if (input.equals("quit")) {
                 break;
             }
-            if(input.isBlank()){
+            if (input.isBlank()) {
                 continue;
             }
             CommonMessage commonMessage = new CommonMessage(input);
@@ -72,8 +74,6 @@ public class UdpBroadcastClient {
         Bootstrap bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
                 .channel(NioDatagramChannel.class)
-                .option(ChannelOption.SO_BROADCAST, true)
-                .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {
@@ -94,7 +94,7 @@ public class UdpBroadcastClient {
         if (channel == null || !channel.isActive()) {
             synchronized (this) {
                 if (channel == null || channel.isActive()) {
-                    channel = bootstrap.bind(remoteAddress.getPort()).sync().channel();
+                    channel = bootstrap.bind(0).sync().channel();
                 }
             }
         }
@@ -162,4 +162,5 @@ public class UdpBroadcastClient {
         }
         return false;
     }
+
 }

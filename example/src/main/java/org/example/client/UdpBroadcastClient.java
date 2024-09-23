@@ -6,7 +6,6 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.*;
 import io.netty.channel.nio.NioEventLoopGroup;
 import io.netty.channel.socket.DatagramPacket;
-import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.DatagramPacketDecoder;
 import io.netty.handler.codec.DatagramPacketEncoder;
@@ -20,35 +19,31 @@ import org.example.protocol.packet.ByteArrayPacket;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.*;
+import java.net.InetSocketAddress;
 import java.util.Scanner;
 
 /**
- * UDP的客户端【一对多】；
- * 不能使用服务器和客户端不能在同一台设备上，组播是基于路由器之上实现的，要想网络内支持组播，需要有能够管理组播组的路由器或是三层交换机（带部分路由功能的交换机）
+ * UDP的客户端【多对多】；
+ * 不能使用服务器和客户端不能在同一台设备上，组播是基于路由器之上实现的，要想网络内支持组播，需要有能够管理组播组的路由器或是三层交换机（带部分路由功能的交换机），广播是多播的特例
  */
-public class UdpMulticastClient {
+public class UdpBroadcastClient {
     /**
      * 远程服务器地址
      */
     private final InetSocketAddress remoteAddress;
-
-    private final Logger logger = LoggerFactory.getLogger(UdpClient.class);
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
-    private final String localTcpIp;
-    private final int remotePort;
-    private volatile NioDatagramChannel channel;
+    private final Logger logger = LoggerFactory.getLogger(UdpBroadcastClient.class);
+    private volatile Channel channel;
 
-    public UdpMulticastClient(String localTcpIp, String remoteUdpIp, int remotePort) {
-        this.localTcpIp = localTcpIp;
-        this.remotePort = remotePort;
-        this.remoteAddress = new InetSocketAddress(remoteUdpIp, remotePort);
+
+    public UdpBroadcastClient(int remotePort) {
+        this.remoteAddress = new InetSocketAddress("255.255.255.255", remotePort);
     }
 
-    public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        UdpMulticastClient udpClient = new UdpMulticastClient("192.168.121.33", "225.1.2.2", 51888);
+    public static void main(String[] args) throws InterruptedException {
+        UdpBroadcastClient udpClient = new UdpBroadcastClient(51888);
         udpClient.connect();
 
         Scanner scanner = new Scanner(System.in);
@@ -73,18 +68,11 @@ public class UdpMulticastClient {
     /**
      * 与服务器建立连接
      */
-    public void connect() throws InterruptedException, UnknownHostException, SocketException {
-        NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getByName(localTcpIp));
-
+    public void connect() throws InterruptedException {
         Bootstrap bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
-                .channelFactory(new ChannelFactory<Channel>() {
-                    @Override
-                    public Channel newChannel() {
-                        return new NioDatagramChannel(InternetProtocolFamily.IPv4);
-                    }
-                })
-                .localAddress(localTcpIp, remotePort)
+                .channel(NioDatagramChannel.class)
+                .option(ChannelOption.SO_BROADCAST, true)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
@@ -97,7 +85,7 @@ public class UdpMulticastClient {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
                                         super.channelRead(ctx, msg);
-                                        logger.info("Client received from Server: {}", msg);
+                                        logger.info("Server received from client: {}", msg);
                                     }
                                 });
                     }
@@ -106,8 +94,7 @@ public class UdpMulticastClient {
         if (channel == null || !channel.isActive()) {
             synchronized (this) {
                 if (channel == null || channel.isActive()) {
-                    channel = (NioDatagramChannel) bootstrap.bind(remotePort).sync().channel();
-                    channel.joinGroup(remoteAddress, networkInterface).sync();
+                    channel = bootstrap.bind(0).sync().channel();
                 }
             }
         }
@@ -175,4 +162,5 @@ public class UdpMulticastClient {
         }
         return false;
     }
+
 }

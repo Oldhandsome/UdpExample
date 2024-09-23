@@ -16,39 +16,29 @@ import java.util.List;
 @ChannelHandler.Sharable
 public class ByteBufDecoder extends MessageToMessageDecoder<ByteBuf> {
 
-    private Logger logger = LoggerFactory.getLogger(ByteBufDecoder.class);
-
-    /**
-     * 传递的消息类型是BaseMessage
-     * */
-    public final static short TYPE_BASE_MESSAGE = 1;
-
-    /**
-     * 传递的消息类型是byte[]
-     * */
-    public final static short TYPE_BYTE_ARRAY = 2;
-
     private final ISerializer serializer = JsonSerializer.getInstance();
+    private final Logger logger = LoggerFactory.getLogger(ByteBufDecoder.class);
 
     @Override
     protected void decode(ChannelHandlerContext channelHandlerContext, ByteBuf byteBuf, List<Object> list) throws Exception {
-        // 2个字节 -》类型
-        short i = byteBuf.readShort();
+        // 4个字节——》ip地址
+        int ipAddress = byteBuf.readInt();
+        // 2个字节——》数据类型
+        short type = byteBuf.readShort();
+        // 2个字节——》数据包的数据体长度
+        short length = byteBuf.readShort();
 
-        int length = byteBuf.readableBytes();
         byte[] bytes = new byte[length];
         byteBuf.readBytes(bytes);
 
-        switch (i) {
-            case TYPE_BASE_MESSAGE:
+        switch (type) {
+            case MessageType.TYPE_BASE_MESSAGE:
                 String jsonString = new String(bytes, Charset.defaultCharset());
                 list.add(serializer.deserialize(jsonString, BaseMessage.class));
                 break;
-            case TYPE_BYTE_ARRAY:
+            case MessageType.TYPE_BYTE_ARRAY:
                 list.add(bytes);
                 break;
         }
-
-        logger.info("Client received message from Server");
     }
 }

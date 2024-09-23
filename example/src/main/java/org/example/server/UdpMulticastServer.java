@@ -92,9 +92,7 @@ public class UdpMulticastServer {
                 if (channel == null || !channel.isActive()) {
                     channel = (NioDatagramChannel) bootstrap.bind(port).sync().channel();
                     channel.joinGroup(udpGroupAddress, networkInterface).sync(); // join group
-
                     logger.debug("receiver start {}!", channel.isActive());
-
                     channel.closeFuture().await();
                 }
             }

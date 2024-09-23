@@ -7,7 +7,6 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.DatagramPacketDecoder;
 import io.netty.handler.codec.DatagramPacketEncoder;
-import io.netty.util.NetUtil;
 import org.example.message.BaseMessage;
 import org.example.protocol.BaseMessageEncoder;
 import org.example.protocol.ByteArrayEncoder;
@@ -15,35 +14,33 @@ import org.example.protocol.ByteBufDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.*;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * UDP服务器【点对点】
- */
-public class UdpServer {
-    private final Logger logger = LoggerFactory.getLogger(UdpServer.class);
+public class UdpBroadcastServer {
+    private final Logger logger = LoggerFactory.getLogger(UdpBroadcastServer.class);
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
     private final int port;
     private volatile NioDatagramChannel channel;
 
-    public UdpServer(int port) {
+    public UdpBroadcastServer(int port) {
         this.port = port;
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        UdpServer udpServer = new UdpServer( 51888);
-        udpServer.startServer();
+        int port = 51888; // 本机端口
+        UdpBroadcastServer receiver = new UdpBroadcastServer(port);
+        receiver.start();
     }
 
     /**
      * 启动服务器
-     *
      */
-    public void startServer() throws InterruptedException, UnknownHostException, SocketException {
-        ChannelFuture channelFuture = new Bootstrap()
+    public void start() throws InterruptedException {
+        Bootstrap bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
                 .channelFactory(new ChannelFactory<Channel>() {
                     @Override
@@ -51,6 +48,10 @@ public class UdpServer {
                         return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
                 })
+                .option(ChannelOption.SO_BROADCAST, true)
+                .option(ChannelOption.SO_REUSEADDR, true)
+                .option(ChannelOption.SO_RCVBUF, 2048 * 1024)
+                .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
                     public void initChannel(NioDatagramChannel ch) throws Exception {
@@ -70,13 +71,15 @@ public class UdpServer {
                                     }
                                 });
                     }
-                }).bind(this.port);
+                });
 
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
-                    channel = (NioDatagramChannel) channelFuture.sync().channel();
-                    logger.debug("server start {}!", channel.isActive());
+                    channel = (NioDatagramChannel) bootstrap.bind(port).sync().channel();
+
+                    logger.debug("receiver start {}!", channel.isActive());
+
                     channel.closeFuture().await();
                 }
             }
@@ -86,18 +89,20 @@ public class UdpServer {
     /**
      * 终止服务器
      */
-    public void endServer() throws InterruptedException {
+    public void stop() throws InterruptedException {
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
                     channel.close().sync();
                     channel.eventLoop().shutdownGracefully().sync();
 
-                    logger.debug("server stop {}!", channel.isActive());
+                    logger.debug("receiver stop {}!", channel.isActive());
 
                     channel = null;
                 }
             }
         }
     }
+
+
 }
