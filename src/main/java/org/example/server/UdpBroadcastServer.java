@@ -14,45 +14,33 @@ import org.example.protocol.ByteBufDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.*;
+import java.net.SocketException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 
-/**
- * UDP服务器【组播】
- */
-public class UdpReceiver {
-    private final Logger logger = LoggerFactory.getLogger(UdpReceiver.class);
+public class UdpBroadcastServer {
+    private final Logger logger = LoggerFactory.getLogger(UdpBroadcastServer.class);
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
-    private final String tcpIp;
-    private final String udpIp;
     private final int port;
     private volatile NioDatagramChannel channel;
 
-    public UdpReceiver(String tcpIp, String udpIp, int port) {
-        this.tcpIp = tcpIp;
-        this.udpIp = udpIp;
+    public UdpBroadcastServer(int port) {
         this.port = port;
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        String tcpIp = "192.168.121.33";// 本机地址
-        String udpIp = "225.1.2.2"; // 组播地址
         int port = 51888; // 本机端口
 
-        UdpReceiver receiver = new UdpReceiver(tcpIp, udpIp, port);
+        UdpBroadcastServer receiver = new UdpBroadcastServer(port);
         receiver.start();
     }
 
     /**
      * 启动服务器
      */
-    public void start() throws InterruptedException, UnknownHostException, SocketException {
-        NetworkInterface networkInterface = NetworkInterface.getByInetAddress(InetAddress.getByName(tcpIp));
-        InetAddress inetAddress = InetAddress.getByName(tcpIp);
-        InetSocketAddress udpGroupAddress = new InetSocketAddress(udpIp, port);
-
+    public void start() throws InterruptedException {
         Bootstrap bootstrap = new Bootstrap()
                 .group(new NioEventLoopGroup())
                 .channelFactory(new ChannelFactory<Channel>() {
@@ -61,8 +49,7 @@ public class UdpReceiver {
                         return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
                 })
-                .option(ChannelOption.IP_MULTICAST_IF, networkInterface)
-                .option(ChannelOption.IP_MULTICAST_ADDR, inetAddress)
+                .option(ChannelOption.SO_BROADCAST, true)
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .option(ChannelOption.SO_RCVBUF, 2048 * 1024)
                 .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
@@ -91,7 +78,6 @@ public class UdpReceiver {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
                     channel = (NioDatagramChannel) bootstrap.bind(port).sync().channel();
-                    channel.joinGroup(udpGroupAddress, networkInterface).sync(); // join group
 
                     logger.debug("receiver start {}!", channel.isActive());
 
@@ -118,5 +104,4 @@ public class UdpReceiver {
             }
         }
     }
-
 }

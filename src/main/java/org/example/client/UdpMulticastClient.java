@@ -27,7 +27,7 @@ import java.util.Scanner;
  * UDP的客户端【一对多】；
  * 不能使用服务器和客户端不能在同一台设备上，组播是基于路由器之上实现的，要想网络内支持组播，需要有能够管理组播组的路由器或是三层交换机（带部分路由功能的交换机）
  */
-public class UdpClient2 {
+public class UdpMulticastClient {
     /**
      * 远程服务器地址
      */
@@ -41,14 +41,14 @@ public class UdpClient2 {
     private final int remotePort;
     private volatile NioDatagramChannel channel;
 
-    public UdpClient2(String localTcpIp, String remoteUdpIp, int remotePort) {
+    public UdpMulticastClient(String localTcpIp, String remoteUdpIp, int remotePort) {
         this.localTcpIp = localTcpIp;
         this.remotePort = remotePort;
         this.remoteAddress = new InetSocketAddress(remoteUdpIp, remotePort);
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        UdpClient2 udpClient = new UdpClient2("192.168.121.33", "225.1.2.2", 51888);
+        UdpMulticastClient udpClient = new UdpMulticastClient("192.168.121.33", "225.1.2.2", 51888);
         udpClient.connect();
 
         Scanner scanner = new Scanner(System.in);
