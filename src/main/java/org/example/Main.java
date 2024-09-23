@@ -38,6 +38,7 @@ public class Main {
         }
 
         // 网卡地址 包含 网络地址、广播地址、子网掩码等信息
+        
         for (InterfaceAddress interfaceAddress : concreteNi.getInterfaceAddresses()) {
             System.out.println(interfaceAddress);
             System.out.println(interfaceAddress.getAddress());
