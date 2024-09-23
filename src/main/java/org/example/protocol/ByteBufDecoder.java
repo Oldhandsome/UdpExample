@@ -7,12 +7,16 @@ import io.netty.handler.codec.MessageToMessageDecoder;
 import org.example.message.BaseMessage;
 import org.example.protocol.serializer.ISerializer;
 import org.example.protocol.serializer.JsonSerializer;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.nio.charset.Charset;
 import java.util.List;
 
 @ChannelHandler.Sharable
 public class ByteBufDecoder extends MessageToMessageDecoder<ByteBuf> {
+
+    private Logger logger = LoggerFactory.getLogger(ByteBufDecoder.class);
 
     /**
      * 传递的消息类型是BaseMessage
@@ -44,5 +48,7 @@ public class ByteBufDecoder extends MessageToMessageDecoder<ByteBuf> {
                 list.add(bytes);
                 break;
         }
+
+        logger.info("Client received message from Server");
     }
 }

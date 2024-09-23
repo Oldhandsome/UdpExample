@@ -15,8 +15,7 @@ import org.example.protocol.ByteBufDecoder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
+import java.net.*;
 import java.nio.charset.StandardCharsets;
 
 /**
@@ -27,24 +26,23 @@ public class UdpServer {
     private final BaseMessageEncoder baseMessageEncoder = new BaseMessageEncoder();
     private final ByteArrayEncoder byteArrayEncoder = new ByteArrayEncoder();
     private final ByteBufDecoder decoder = new ByteBufDecoder();
-    private final InetSocketAddress address;
+    private final int port;
     private volatile NioDatagramChannel channel;
 
-    public UdpServer(InetSocketAddress address) {
-        this.address = address;
+    public UdpServer(int port) {
+        this.port = port;
     }
 
-    public static void main(String[] args) throws InterruptedException {
-        UdpServer udpServer = new UdpServer(new InetSocketAddress("239.8.8.1", 51888));
+    public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
+        UdpServer udpServer = new UdpServer( 51888);
         udpServer.startServer();
     }
 
     /**
      * 启动服务器
+     *
      */
-    public void startServer() throws InterruptedException {
-        NetworkInterface networkInterface = NetUtil.LOOPBACK_IF;
-
+    public void startServer() throws InterruptedException, UnknownHostException, SocketException {
         ChannelFuture channelFuture = new Bootstrap()
                 .group(new NioEventLoopGroup())
                 .channelFactory(new ChannelFactory<Channel>() {
@@ -52,7 +50,8 @@ public class UdpServer {
                     public Channel newChannel() {
                         return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
-                }).handler(new ChannelInitializer<NioDatagramChannel>() {
+                })
+                .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
                     public void initChannel(NioDatagramChannel ch) throws Exception {
                         ch.pipeline()
@@ -71,13 +70,12 @@ public class UdpServer {
                                     }
                                 });
                     }
-                }).bind(address.getPort());
+                }).bind(this.port);
 
         if (channel == null || !channel.isActive()) {
             synchronized (UdpServer.class) {
                 if (channel == null || !channel.isActive()) {
                     channel = (NioDatagramChannel) channelFuture.sync().channel();
-                    channel.joinGroup(address, networkInterface).sync();
                     logger.debug("server start {}!", channel.isActive());
                     channel.closeFuture().await();
                 }
