@@ -83,9 +83,9 @@ public class UdpMulticastClient {
                     @Override
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {
                         nioDatagramChannel.pipeline()
-                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new Encoders.ProtocolPacketEncoder()))
+                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new Encoders.ProtocolPacketEncoder())) // DefaultAddressEnvelop<ProtocolPacket>
                                 .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new Decoders.ByteBufDecoder()))
-                                .addLast("Base-Message-Encoder", new Encoders.MessageEncoder(remoteAddress))
+                                .addLast("Base-Message-Encoder", new Encoders.MessageEncoder(remoteAddress)) // Message
                                 .addLast("Protocol-Packet-Decoder", new Decoders.ProtocolPacketDecoder())
                                 .addLast("ToString-MooooooN", new ChannelInboundHandlerAdapter() {
                                     @Override

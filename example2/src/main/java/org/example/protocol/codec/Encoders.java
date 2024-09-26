@@ -2,6 +2,7 @@ package org.example.protocol.codec;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
+import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.handler.codec.MessageToMessageEncoder;
 import org.example.protocol.packet.ProtocolPacket;
 import org.example.protocol.packet.msg.Message;
@@ -98,7 +99,7 @@ public class Encoders {
                 protocolPacket.setData(data);
             }
 
-            out.add(protocolPacket);
+            out.add(new DefaultAddressedEnvelope<>(protocolPacket, remoteAddress));
         }
     }
 }
