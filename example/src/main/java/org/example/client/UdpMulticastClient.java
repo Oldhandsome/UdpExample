@@ -46,7 +46,7 @@ public class UdpMulticastClient {
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        UdpMulticastClient udpClient = new UdpMulticastClient("192.168.121.178", "225.1.2.2", 51888);
+        UdpMulticastClient udpClient = new UdpMulticastClient("192.168.121.178", "239.1.1.1", 51888);
         udpClient.connect();
 
         Scanner scanner = new Scanner(System.in);
@@ -82,6 +82,8 @@ public class UdpMulticastClient {
                         return new NioDatagramChannel(InternetProtocolFamily.IPv4);
                     }
                 })
+                .option(ChannelOption.IP_MULTICAST_IF, networkInterface)
+                .option(ChannelOption.IP_MULTICAST_LOOP_DISABLED, false) // 避免受到自身的消息
                 .option(ChannelOption.SO_REUSEADDR, true)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
@@ -103,7 +105,7 @@ public class UdpMulticastClient {
         if (channel == null || !channel.isActive()) {
             synchronized (this) {
                 if (channel == null || channel.isActive()) {
-                    channel = (NioDatagramChannel) bootstrap.bind(0).sync().channel(); // 使用系统分配的端口，避免收到自己发出的数据
+                    channel = (NioDatagramChannel) bootstrap.bind(remoteAddress.getPort()).sync().channel(); // 使用系统分配的端口，避免收到自己发出的数据
                     channel.joinGroup(remoteAddress, networkInterface).sync();
                 }
             }

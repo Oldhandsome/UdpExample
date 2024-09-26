@@ -94,7 +94,7 @@ public class UdpBroadcastClient {
         if (channel == null || !channel.isActive()) {
             synchronized (this) {
                 if (channel == null || channel.isActive()) {
-                    channel = bootstrap.bind(0).sync().channel();
+                    channel = bootstrap.bind(remoteAddress.getPort()).sync().channel();
                 }
             }
         }
