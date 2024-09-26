@@ -59,8 +59,6 @@ public class UdpMulticastServer {
                 .option(ChannelOption.IP_MULTICAST_IF, networkInterface)
                 .option(ChannelOption.IP_MULTICAST_ADDR, inetAddress)
                 .option(ChannelOption.SO_REUSEADDR, true)
-                .option(ChannelOption.SO_RCVBUF, 2048 * 1024)
-                .option(ChannelOption.SO_SNDBUF, 1024 * 1024)
                 .handler(new ChannelInitializer<NioDatagramChannel>() {
                     @Override
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {

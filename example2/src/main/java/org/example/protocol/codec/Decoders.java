@@ -14,6 +14,7 @@ import org.slf4j.LoggerFactory;
 
 import java.nio.charset.StandardCharsets;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Decoders {
 
@@ -65,6 +66,11 @@ public class Decoders {
 
         private final Logger logger = LoggerFactory.getLogger(ProtocolPacketDecoder.class);
 
+        /**
+         * 过长的数据包分段拼接
+         * */
+        private final ConcurrentHashMap<String, ByteBuf> concurrentHashMap = new ConcurrentHashMap();
+
         @Override
         protected void decode(ChannelHandlerContext ctx, ProtocolPacket msg, List<Object> out) throws Exception {
 
@@ -84,10 +90,23 @@ public class Decoders {
                     out.add(serializer.deserialize(body, Message.getClassByCode(dataType)));
                     break;
                 case ProtocolPacket.MESSAGE_TYPE_FIRST_PACKET:
+
+
+
+
+
                     break;
                 case ProtocolPacket.MESSAGE_TYPE_MIDDLE_PACKET:
+
+
+
                     break;
                 case ProtocolPacket.MESSAGE_TYPE_LAST_PACKET:
+
+
+
+
+
                     break;
             }
         }

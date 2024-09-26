@@ -20,6 +20,16 @@ import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Encoders {
+
+    public final static int MAX_PACKET_DATA_SIZE = 10;
+
+    private final static AtomicInteger sequenceIdGenerator;
+
+    static {
+        Random random = new Random();
+        sequenceIdGenerator = new AtomicInteger(random.nextInt());
+    }
+
     /**
      * 序列化 ProtocolPacket 到 ByteBuf
      */
@@ -64,13 +74,9 @@ public class Encoders {
 
         private final ISerializer serializer = JsonSerializer.getInstance();
 
-        private final AtomicInteger sequenceIdGenerator;
-
         private final InetSocketAddress remoteAddress;
 
         public MessageEncoder(InetSocketAddress remoteAddress) {
-            Random random = new Random();
-            this.sequenceIdGenerator = new AtomicInteger(random.nextInt());
             this.remoteAddress = remoteAddress;
         }
 
@@ -80,26 +86,59 @@ public class Encoders {
 
             byte[] dataBytes = serializer.serialize(msg).getBytes(StandardCharsets.UTF_8);
             int dataType = msg.getCode();
-            int id = sequenceIdGenerator.incrementAndGet();
 
-            ProtocolPacket protocolPacket = new ProtocolPacket();
-            {
-                protocolPacket.setSeqNum(id);
+            if (dataBytes.length < MAX_PACKET_DATA_SIZE) {
+                ProtocolPacket protocolPacket = new ProtocolPacket();
+                protocolPacket.setSeqNum(sequenceIdGenerator.incrementAndGet());
+                protocolPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
+                protocolPacket.setPort(remoteAddress.getPort());
                 // 发送的是一条完整的信息
                 protocolPacket.setMessageType(ProtocolPacket.MESSAGE_TYPE_SOLO_PACKET);
                 protocolPacket.setMsgNum(1);
-                protocolPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
-                protocolPacket.setPort(remoteAddress.getPort());
 
-                ByteBuf data = ByteBufUtils.buffer(dataBytes.length + 1);
+                ByteBuf data = ByteBufUtils.buffer(dataBytes.length + 1);// 追加一个字节 的 dataType
                 {
                     data.writeByte(dataType);
                     data.writeBytes(dataBytes);
                 }
                 protocolPacket.setData(data);
-            }
+                out.add(new DefaultAddressedEnvelope<>(protocolPacket, remoteAddress));
+            } else {
+                int startIndex = 0, endIndex = MAX_PACKET_DATA_SIZE;
+                int msgNum = 1;
+                // 将长度超过限制的包拆成多个
+                while (startIndex < dataBytes.length || endIndex < dataBytes.length) {
+                    int length = Math.min(endIndex, dataBytes.length) - startIndex;
 
-            out.add(new DefaultAddressedEnvelope<>(protocolPacket, remoteAddress));
+                    {
+                        ProtocolPacket protocolPacket = new ProtocolPacket();
+                        protocolPacket.setSeqNum(sequenceIdGenerator.incrementAndGet());
+                        protocolPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
+                        protocolPacket.setPort(remoteAddress.getPort());
+                        // 按照位置发送不同的MessageType
+                        if (endIndex == MAX_PACKET_DATA_SIZE) {
+                            protocolPacket.setMessageType(ProtocolPacket.MESSAGE_TYPE_FIRST_PACKET);
+                        } else if (endIndex >= dataBytes.length) {
+                            protocolPacket.setMessageType(ProtocolPacket.MESSAGE_TYPE_LAST_PACKET);
+                        } else {
+                            protocolPacket.setMessageType(ProtocolPacket.MESSAGE_TYPE_MIDDLE_PACKET);
+                        }
+                        protocolPacket.setMsgNum(msgNum);
+
+                        ByteBuf data = ByteBufUtils.buffer(length + 1); // 追加一个字节 的 dataType
+                        {
+                            data.writeByte(dataType);
+                            data.writeBytes(dataBytes, startIndex, length);
+                        }
+                        protocolPacket.setData(data);
+                        out.add(new DefaultAddressedEnvelope<>(protocolPacket, remoteAddress));
+                    }
+
+                    msgNum += 1;
+                    startIndex = endIndex;
+                    endIndex += MAX_PACKET_DATA_SIZE;
+                }
+            }
         }
     }
 }
