@@ -10,6 +10,7 @@
     <packaging>pom</packaging>
     <modules>
         <module>example</module>
+        <module>example2</module>
     </modules>
 
     <properties>
