@@ -4,6 +4,7 @@ import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.handler.codec.MessageToMessageEncoder;
+import io.netty.util.ReferenceCountUtil;
 import org.example.protocol.util.PckAckMsgSender;
 import org.example.protocol.packet.DataPacket;
 import org.example.protocol.packet.ProtocolPacket;
@@ -43,6 +44,8 @@ public class Encoders {
             // 如果是dataPacket，加入待确认的集合中
             if(msg instanceof DataPacket){
                 addUnconfirmedPacket((DataPacket) msg);
+
+                ReferenceCountUtil.release(((DataPacket) msg).getData());
             }
         }
     }
