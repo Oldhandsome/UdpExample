@@ -19,6 +19,6 @@ public abstract class Message {
         return clazz;
     }
 
-    public abstract int getCode();
+    public abstract int getMessageCode();
 
 }

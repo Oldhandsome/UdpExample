@@ -32,7 +32,7 @@ public class UdpMulticastServer {
     }
 
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
-        String tcpIp = "192.168.121.33";// 本机地址
+        String tcpIp = "192.168.121.178";// 本机地址
         String udpIp = "225.1.2.2"; // 组播地址
         int port = 51888; // 本机端口
 
@@ -64,9 +64,10 @@ public class UdpMulticastServer {
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {
                         nioDatagramChannel.pipeline()
                                 .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new Encoders.ProtocolPacketEncoder()))
+                                .addLast("Message-Encoder", new Encoders.MessageEncoder(null))
                                 .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new Decoders.ByteBufDecoder()))
-                                .addLast("Base-Message-Encoder", new Encoders.MessageEncoder(null))
-                                .addLast("Protocol-Packet-Decoder", new Decoders.ProtocolPacketDecoder())
+                                .addLast("Control-Packet-Decoder", new Decoders.ControlPacketDecoder())
+                                .addLast("Data-Packet-Decoder", new Decoders.DataPacketDecoder())
                                 .addLast(new ChannelInboundHandlerAdapter() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {

@@ -1,6 +1,8 @@
 package org.example.util;
 
 import io.netty.buffer.ByteBuf;
+import io.netty.buffer.ByteBufAllocator;
+import io.netty.buffer.CompositeByteBuf;
 import io.netty.buffer.UnpooledByteBufAllocator;
 
 public class ByteBufUtils {
@@ -12,5 +14,9 @@ public class ByteBufUtils {
 
     public static ByteBuf buffer(){
         return unpooledByteBufAllocator.buffer();
+    }
+
+    public static CompositeByteBuf compositeByteBuf(){
+        return ByteBufAllocator.DEFAULT.compositeBuffer();
     }
 }

@@ -2,7 +2,8 @@ package org.example.protocol.serializer;
 
 public interface ISerializer {
 
-    String serialize(Object obj);
+    byte[] serialize(Object obj);
 
-    <T> T deserialize(String message, Class<T> msgClass);
+    <T> T deserialize(byte[] message, Class<T> msgClass);
+
 }

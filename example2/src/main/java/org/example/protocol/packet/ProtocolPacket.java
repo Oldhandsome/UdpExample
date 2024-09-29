@@ -6,40 +6,33 @@ import lombok.ToString;
 
 @Data
 @ToString
-public class ProtocolPacket {
-    public static final int MESSAGE_TYPE_SOLO_PACKET = 3;
-    public static final int MESSAGE_TYPE_FIRST_PACKET = 2;
-    public static final int MESSAGE_TYPE_LAST_PACKET = 1;
-    public static final int MESSAGE_TYPE_MIDDLE_PACKET = 0;
+public abstract class ProtocolPacket {
+    public static final int PACKET_TYPE_DATA = 0;
 
-    public static final int MAX_MESSAGE_NUM = 0x3FFFFFFF;
-    /**
-     * sequence number
-     */
-    protected int seqNum;
-
-    /**
-     * message number
-     */
-    private int msgNum;
-
-    /**
-     * message type
-     */
-    private int messageType;
+    public static final int PACKET_TYPE_CONTROL = 1;
 
     /**
      * destination ip address
      */
-    private String ipAddress;
+    protected String ipAddress;
 
     /**
      * destination port
      */
-    private int port;
+    protected int port;
 
     /**
-     * packet data
+     * 返回PacketType
      */
-    private ByteBuf data;
+    public abstract int getPacketType();
+
+    /**
+     * 序列化
+     */
+    public abstract void serialize(ByteBuf out);
+
+    /**
+     * 反序列化
+     */
+    public abstract void deserialize(ByteBuf in);
 }

@@ -2,9 +2,14 @@ package org.example.protocol.serializer;
 
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
+import java.nio.charset.StandardCharsets;
 
 public class JsonSerializer implements ISerializer {
     private final Gson gson;
+    private final Logger logger = LoggerFactory.getLogger(JsonSerializer.class);
 
     private JsonSerializer() {
         GsonBuilder gsonBuilder = new GsonBuilder();
@@ -15,12 +20,17 @@ public class JsonSerializer implements ISerializer {
         return Inner.serializer;
     }
 
-    public String serialize(Object obj) {
-        return gson.toJson(obj);
+    @Override
+    public byte[] serialize(Object obj) {
+        logger.debug("serialize obj: {}", obj.toString());
+        return gson.toJson(obj).getBytes(StandardCharsets.UTF_8);
     }
 
-    public <T> T deserialize(String message, Class<T> msgClass) {
-        return gson.fromJson(message, msgClass);
+    @Override
+    public <T> T deserialize(byte[] messageBytes, Class<T> msgClass) {
+        String json = new String(messageBytes, StandardCharsets.UTF_8);
+        logger.debug("deserialize msg: {}", json);
+        return gson.fromJson(json, msgClass);
     }
 
     /**

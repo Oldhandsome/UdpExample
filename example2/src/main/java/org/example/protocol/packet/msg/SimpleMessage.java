@@ -14,7 +14,7 @@ public class SimpleMessage extends Message {
     private String msg;
 
     @Override
-    public int getCode() {
+    public int getMessageCode() {
         return SIMPLE_MSG;
     }
 }
