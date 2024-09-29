@@ -9,7 +9,6 @@ import org.example.util.ByteBufUtils;
 @Getter
 @ToString
 public class FullDataPacket {
-
     /**
      * 集合
      */
@@ -32,6 +31,9 @@ public class FullDataPacket {
         this.seqNum = seqNum;
     }
 
+    /**
+     * 数组长度最多是16，可能会抛出异常，这是 UnpooledByteBufAllocator的问题
+     * */
     public void addDataPacket(DataPacket dataPacket) {
         synchronized (compositeByteBuf) {
             switch (dataPacket.getMsgType()) {

@@ -75,11 +75,11 @@ public class Decoders {
         protected void decode(ChannelHandlerContext ctx, DataPacket dataPacket, List<Object> out) throws Exception {
             switch (dataPacket.getMsgType()) {
                 case DataPacket.DATA_PACKET_TYPE_SOLO_PACKET: {
+                    int messageCode = dataPacket.getData().readByte();
+
                     int length = dataPacket.getData().readableBytes();
                     byte[] messageBytes = new byte[length];
                     dataPacket.getData().readBytes(messageBytes);
-
-                    int messageCode = dataPacket.getData().readByte();
 
                     out.add(serializer.deserialize(messageBytes, Message.getClassByCode(messageCode)));
 
@@ -90,6 +90,7 @@ public class Decoders {
                      DataPacket.DATA_PACKET_TYPE_MIDDLE_PACKET,
                      DataPacket.DATA_PACKET_TYPE_LAST_PACKET: {
                     int startSeqNum = dataPacket.getSeqNum() - dataPacket.getMsgNum();
+                    int messageCode = dataPacket.getData().readByte();
                     FullDataPacket fullDataPacket = unassembledByteBufMapper.get(startSeqNum);
                     if (fullDataPacket == null) {
                         fullDataPacket = new FullDataPacket(startSeqNum);
@@ -101,8 +102,6 @@ public class Decoders {
                         int length = fullDataPacket.getCompositeByteBuf().readableBytes();
                         byte[] messageBytes = new byte[length];
                         fullDataPacket.getCompositeByteBuf().getBytes(fullDataPacket.getCompositeByteBuf().readerIndex(), messageBytes);
-
-                        int messageCode = dataPacket.getData().readByte();
 
                         out.add(serializer.deserialize(messageBytes, Message.getClassByCode(messageCode)));
 

@@ -44,8 +44,6 @@ public class Encoders {
             // 如果是dataPacket，加入待确认的集合中
             if(msg instanceof DataPacket){
                 addUnconfirmedPacket((DataPacket) msg);
-
-                ReferenceCountUtil.release(((DataPacket) msg).getData());
             }
         }
     }
@@ -70,6 +68,8 @@ public class Encoders {
             byte[] messageBytes = serializer.serialize(msg);
             int messageCode = msg.getMessageCode();
 
+            logger.debug("DataPacket code {}, length {}", messageCode, messageBytes.length);
+
             DataPacket dataPacket;
             if (messageBytes.length < DataPacket.MAX_PACKET_DATA_SIZE) {
                 dataPacket = new DataPacket();
@@ -86,6 +86,9 @@ public class Encoders {
                     data.writeBytes(messageBytes);
                 }
                 dataPacket.setData(data);
+
+                logger.debug("DataPacket {}, length {}", dataPacket, messageBytes.length);
+
                 out.add(new DefaultAddressedEnvelope<>(dataPacket, remoteAddress));
             } else {
                 // 拆包次数
@@ -123,6 +126,9 @@ public class Encoders {
                                     data.writeBytes(messageBytes, startIndex, length);
                                 }
                                 dataPacket.setData(data);
+
+                                logger.debug("DataPacket {}, length {}", dataPacket, length);
+
                                 out.add(new DefaultAddressedEnvelope<>(dataPacket, remoteAddress));
                             }
 
