@@ -22,6 +22,11 @@ public abstract class ProtocolPacket {
     protected int port;
 
     /**
+     * destination socket id
+     * */
+    protected int destinationSocketId;
+
+    /**
      * 返回PacketType
      */
     public abstract int getPacketType();

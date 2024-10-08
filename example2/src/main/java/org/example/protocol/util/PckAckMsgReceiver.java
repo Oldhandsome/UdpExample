@@ -1,7 +1,6 @@
 package org.example.protocol.util;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.Queue;
 
 /**
  * Receiver
@@ -10,12 +9,18 @@ import java.util.List;
 public interface PckAckMsgReceiver {
 
     /**
-     * 已确认的报文
+     * 获取确认队列中的确认序号队列
      */
-    List<Integer> confirmedPackets = new ArrayList<>();
+    Queue<Integer> getConfirmPackets();
 
-    default void addConfirmedPacket(int sequenceNum) {
-        confirmedPackets.add(sequenceNum);
-    }
+    /**
+     * 获取确认队列的需要确认的序号个数
+     */
+    int getConfirmedPacketsLength();
+
+    /**
+     * 向确认队列尾部中添加一个序号
+     */
+    void addConfirmedPacket(int sequenceNum);
 
 }

@@ -1,4 +1,4 @@
-package org.example;
+package org.example.server;
 
 import io.netty.bootstrap.Bootstrap;
 import io.netty.channel.*;
@@ -7,8 +7,6 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.DatagramPacketDecoder;
 import io.netty.handler.codec.DatagramPacketEncoder;
-import org.example.protocol.codec.Decoders;
-import org.example.protocol.codec.Encoders;
 import org.example.protocol.packet.msg.Message;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -63,11 +61,12 @@ public class UdpMulticastServer {
                     @Override
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {
                         nioDatagramChannel.pipeline()
-                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new Encoders.ProtocolPacketEncoder()))
-                                .addLast("Message-Encoder", new Encoders.MessageEncoder(null))
-                                .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new Decoders.ByteBufDecoder()))
-                                .addLast("Control-Packet-Decoder", new Decoders.ControlPacketDecoder())
-                                .addLast("Data-Packet-Decoder", new Decoders.DataPacketDecoder())
+                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new ServerEncoders.ProtocolPacketEncoder()))
+                                .addLast("Message-Encoder", new ServerEncoders.MessageEncoder(null))
+
+                                .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new ServerDecoders.ByteBufDecoder()))
+                                .addLast("Control-Packet-Decoder", new ServerDecoders.ControlPacketDecoder())
+                                .addLast("Data-Packet-Decoder", new ServerDecoders.DataPacketDecoder())
                                 .addLast(new ChannelInboundHandlerAdapter() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -85,7 +84,7 @@ public class UdpMulticastServer {
                 if (channel == null || !channel.isActive()) {
                     channel = (NioDatagramChannel) bootstrap.bind(port).sync().channel();
                     channel.joinGroup(udpGroupAddress, networkInterface).sync(); // join group
-                    logger.debug("receiver start {}!", channel.isActive());
+                    logger.debug("server start {}!", channel.isActive());
                     channel.closeFuture().await();
                 }
             }

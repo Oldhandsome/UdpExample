@@ -1,4 +1,4 @@
-package org.example;
+package org.example.client;
 
 
 import io.netty.bootstrap.Bootstrap;
@@ -10,8 +10,7 @@ import io.netty.channel.socket.InternetProtocolFamily;
 import io.netty.channel.socket.nio.NioDatagramChannel;
 import io.netty.handler.codec.DatagramPacketDecoder;
 import io.netty.handler.codec.DatagramPacketEncoder;
-import org.example.protocol.codec.Decoders;
-import org.example.protocol.codec.Encoders;
+import org.example.protocol.packet.msg.HandShake;
 import org.example.protocol.packet.msg.Message;
 import org.example.protocol.packet.msg.SimpleMessage;
 import org.slf4j.Logger;
@@ -42,6 +41,8 @@ public class UdpMulticastClient {
     public static void main(String[] args) throws InterruptedException, SocketException, UnknownHostException {
         UdpMulticastClient udpClient = new UdpMulticastClient("192.168.121.178", "225.1.2.2", 51888);
         udpClient.connect();
+
+        udpClient.handShake();
 
         Scanner scanner = new Scanner(System.in);
 
@@ -83,10 +84,12 @@ public class UdpMulticastClient {
                     @Override
                     protected void initChannel(NioDatagramChannel nioDatagramChannel) throws Exception {
                         nioDatagramChannel.pipeline()
-                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new Encoders.ProtocolPacketEncoder())) // DefaultAddressEnvelop<ProtocolPacket>
-                                .addLast("Message-Encoder", new Encoders.MessageEncoder(remoteAddress)) // Message
-                                .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new Decoders.ByteBufDecoder()))
-                                .addLast("Control-Packet-Decoder", new Decoders.ControlPacketDecoder())
+                                .addLast("Protocol-Packet-Encoder", new DatagramPacketEncoder<>(new ClientEncoders.ProtocolPacketEncoder())) // DefaultAddressEnvelop<ProtocolPacket>
+                                .addLast("Hand-Shake-Encoder", new ClientEncoders.HandShakeEncoder(remoteAddress)) // HandShake
+                                .addLast("Message-Encoder", new ClientEncoders.MessageEncoder(remoteAddress)) // Message
+
+                                .addLast("ByteBuf-Decoder", new DatagramPacketDecoder(new ClientDecoders.ByteBufDecoder()))
+                                .addLast("Control-Packet-Decoder", new ClientDecoders.ControlPacketDecoder())
                                 .addLast("ToString-MooooooN", new ChannelInboundHandlerAdapter() {
                                     @Override
                                     public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
@@ -120,6 +123,19 @@ public class UdpMulticastClient {
                 }
             }
         }
+    }
+
+    /**
+     * hand shake 建立连接
+     */
+    public boolean handShake() {
+        synchronized (this) {
+            if (channel != null && channel.isActive()) {
+                channel.writeAndFlush(new HandShake());
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

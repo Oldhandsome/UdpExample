@@ -1,13 +1,13 @@
-package org.example.protocol.codec;
+package org.example.server;
 
 import io.netty.buffer.ByteBuf;
 import io.netty.channel.ChannelHandlerContext;
 import io.netty.channel.DefaultAddressedEnvelope;
 import io.netty.handler.codec.MessageToMessageEncoder;
-import io.netty.util.ReferenceCountUtil;
-import org.example.protocol.util.PckAckMsgSender;
+import org.example.protocol.packet.ControlPacket;
 import org.example.protocol.packet.DataPacket;
 import org.example.protocol.packet.ProtocolPacket;
+import org.example.protocol.packet.msg.HandShake;
 import org.example.protocol.packet.msg.Message;
 import org.example.protocol.serializer.ISerializer;
 import org.example.protocol.serializer.JsonSerializer;
@@ -16,40 +16,38 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.net.InetSocketAddress;
-import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Random;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Encoders {
+ class ServerEncoders {
 
     private final static AtomicInteger sequenceIdGenerator;
 
     static {
         Random random = new Random();
-        sequenceIdGenerator = new AtomicInteger(random.nextInt());
+        sequenceIdGenerator = new AtomicInteger(random.nextInt(1000));
+    }
+
+    public static int getCurrentSequenceId(){
+        return sequenceIdGenerator.get();
     }
 
     /**
      * 序列化 ProtocolPacket 到 ByteBuf
      */
-    public static class ProtocolPacketEncoder extends MessageToMessageEncoder<ProtocolPacket> implements PckAckMsgSender {
+    public static class ProtocolPacketEncoder extends MessageToMessageEncoder<ProtocolPacket> {
 
         @Override
         protected void encode(ChannelHandlerContext channelHandlerContext, ProtocolPacket msg, List<Object> list) throws Exception {
             ByteBuf out = ByteBufUtils.buffer();
             msg.serialize(out);
             list.add(out);
-
-            // 如果是dataPacket，加入待确认的集合中
-            if(msg instanceof DataPacket){
-                addUnconfirmedPacket((DataPacket) msg);
-            }
         }
     }
 
     /**
-     * 序列化 Message -> DataPacket
+     * 客户端发送数据（序列化 Message -> DefaultAddressedEnvelope）
      */
     public static class MessageEncoder extends MessageToMessageEncoder<Message> {
 
@@ -74,8 +72,8 @@ public class Encoders {
             if (messageBytes.length < DataPacket.MAX_PACKET_DATA_SIZE) {
                 dataPacket = new DataPacket();
                 dataPacket.setSeqNum(sequenceIdGenerator.incrementAndGet());
-                dataPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
-                dataPacket.setPort(remoteAddress.getPort());
+//                dataPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
+//                dataPacket.setPort(remoteAddress.getPort());
                 // 发送的是一条完整的信息
                 dataPacket.setMsgType(DataPacket.DATA_PACKET_TYPE_SOLO_PACKET);
                 dataPacket.setMsgNum(0);
@@ -94,10 +92,10 @@ public class Encoders {
                 // 拆包次数
                 int times = (int) Math.ceil((float) messageBytes.length / DataPacket.MAX_PACKET_DATA_SIZE);
                 // 保证当前的sequenceNum是连续的
-                while (true){
+                while (true) {
                     int current = sequenceIdGenerator.get();
                     int expectValue = current + times;
-                    if(sequenceIdGenerator.compareAndSet(current, expectValue)){
+                    if (sequenceIdGenerator.compareAndSet(current, expectValue)) {
 
                         int startIndex = 0, endIndex = DataPacket.MAX_PACKET_DATA_SIZE;
                         int msgNum = 0;
@@ -108,8 +106,8 @@ public class Encoders {
                             {
                                 dataPacket = new DataPacket();
                                 dataPacket.setSeqNum(current + msgNum);
-                                dataPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
-                                dataPacket.setPort(remoteAddress.getPort());
+//                                dataPacket.setIpAddress(remoteAddress.getAddress().getHostAddress());
+//                                dataPacket.setPort(remoteAddress.getPort());
                                 // 按照位置发送不同的MessageType
                                 if (endIndex == DataPacket.MAX_PACKET_DATA_SIZE) {
                                     dataPacket.setMsgType(DataPacket.DATA_PACKET_TYPE_FIRST_PACKET);

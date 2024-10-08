@@ -65,10 +65,12 @@ public class DataPacket extends ProtocolPacket {
         bytes += this.getMsgNum();
         out.writeInt(bytes);
 
-        // 32 bits ——》ip地址
-        out.writeInt(IpUtil.toInt(this.getIpAddress()));
-        // 32 bits ——》port
-        out.writeInt(this.getPort());
+//        // 32 bits ——》ip地址
+//        out.writeInt(IpUtil.toInt(this.getIpAddress()));
+//        // 32 bits ——》port
+//        out.writeInt(this.getPort());
+        // 32 bits ——》destination socket id
+        out.writeInt(this.getDestinationSocketId());
         // 32 bits ——》 数据包的数据体长度
         int length = this.getData().readableBytes();
         out.writeInt(length);
@@ -89,10 +91,12 @@ public class DataPacket extends ProtocolPacket {
         msgNum = messageTypeAndNum & DataPacket.MAX_MESSAGE_NUM;
         // 2 bits ——》messageType
         msgType = messageTypeAndNum >>> 30; // 这里用的是无符号右移
-        // 32 bits ——》ip地址
-        ipAddress = IpUtil.fromInt(in.readInt());
-        // 32 bits ——》port
-        port = in.readInt();
+//        // 32 bits ——》ip地址
+//        ipAddress = IpUtil.fromInt(in.readInt());
+//        // 32 bits ——》port
+//        port = in.readInt();
+//        // 32 bits ——》destination socket id
+        destinationSocketId = in.readInt();
         // 32 bits ——》 数据包的数据体长度
         int length = in.readInt();
 
